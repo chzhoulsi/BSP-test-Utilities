@@ -27,5 +27,6 @@
 uint32_t get_crc32(void *, unsigned long);
 int get_mtd_partition_info(const char *, struct mtd_info_user *);
 int get_mtd_partition(void *, unsigned long, const char *);
+int mtd_write(const char *device, const char *input);
 
 #endif /* __UTIL__H__ */

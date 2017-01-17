@@ -28,7 +28,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <linux/limits.h>
-#include <stropts.h>
 #include <errno.h>
 
 #include "util.h"
@@ -196,6 +195,86 @@ get_mtd_partition(void *output, unsigned long size, const char *partition)
 	}
 
 	close(fd);
+
+	return 0;
+}
+
+
+
+int mtd_write(const char *device, const char *input)
+{
+	struct mtd_info_user mtd_info;
+	struct stat input_stat;
+	FILE *image_file = NULL;
+	void *image = NULL;
+	int mtd_fd;
+	struct erase_info_user erase;
+	int selected;
+	char buffer[11];
+
+	if (0 != get_mtd_partition_info(device, &mtd_info)) {	
+		fprintf(stderr, "Error Getting MTD Info!\n");
+		goto cleanup;
+	}
+
+	if (0 != stat(input, &input_stat)) {
+		fprintf(stderr, "Error reading %s: %s\n",
+			input, strerror(errno));
+		goto cleanup;
+	}
+
+	if (NULL == (image_file = fopen(input, "rb"))) {
+		fprintf(stderr, "Error opening %s: %s\n",
+			input, strerror(errno));
+		goto cleanup;
+	}
+
+	image = malloc(input_stat.st_size);
+
+	if (input_stat.st_size !=
+	    fread(image, 1, input_stat.st_size, image_file)) {
+		fprintf(stderr, "Error reading %s: %s\n",
+			input, strerror(errno));
+		goto cleanup;
+	}
+
+	if (0 > (mtd_fd = open(device, O_RDWR))) {
+		fprintf(stderr, "Error opening %s: %s\n",
+			device, strerror(errno));
+		goto cleanup;
+	}
+
+	erase.start = 0;
+	erase.length = mtd_info.size;
+
+	if (0 > ioctl(mtd_fd, MEMERASE, &erase)) {
+		fprintf(stderr, "Error erasing %s: %s\n",
+			device, strerror(errno));
+		goto cleanup;
+	}
+
+	if (0 > lseek(mtd_fd, 0, SEEK_SET)) {
+		fprintf(stderr, "Error rewinding %s: %s\n",
+			device, strerror(errno));
+		goto cleanup;
+	}
+
+	if (input_stat.st_size != write(mtd_fd, image, input_stat.st_size)) {
+		fprintf(stderr, "Error writing %s: %s\n",
+			device, strerror(errno));
+		goto cleanup;
+	}
+
+cleanup:
+
+	if (NULL != image_file)
+		fclose(image_file);
+	
+	if (NULL != image)
+		free(image);
+
+	if (0 != mtd_fd)
+		close(mtd_fd);
 
 	return 0;
 }

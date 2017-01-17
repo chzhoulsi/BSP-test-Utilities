@@ -52,7 +52,7 @@ $(BUILD_DIRECTORY)/%.d: %.c
 	$(MAKE_BUILD_DIRECTORY)
 	@$(SHELL) -ec '$(CC) -M $(CFLAGS) $< | sed '\''s/\($*\)\.o[ :]*/$(BUILD_DIRECTORY)\/\1.o $(BUILD_DIRECTORY)\/$(notdir $@) : /g'\'' > $@'
 
-SOURCES = util.c ubootimages.c splparms.c
+SOURCES = util.c image.c 
 OBJECTS = $(addprefix $(BUILD_DIRECTORY)/,$(patsubst %.c,%.o,$(SOURCES)))
 DEPENDENCIES = $(addprefix $(BUILD_DIRECTORY)/,$(patsubst %.c,%.d,$(SOURCES)))
 
@@ -60,15 +60,15 @@ DEPENDENCIES = $(addprefix $(BUILD_DIRECTORY)/,$(patsubst %.c,%.d,$(SOURCES)))
 # Targets #
 ###########
 
-.PHONY: all configure config build clean distclean install archive
+.PHONY: all configure config build clean distclean install
 
-all: clean configure build archive
+all: clean configure build 
 
 configure:
 
 config: configure
 
-build: $(BUILD_DIRECTORY)/ubootimages $(BUILD_DIRECTORY)/splparms
+build: $(BUILD_DIRECTORY)/image 
 
 clean:
 	@rm -rf *.tar.gz *~ $(BUILD_DIRECTORY)
@@ -76,15 +76,15 @@ clean:
 distclean: clean
 
 install:
-	@echo "Just copy $(BUILD_DIRECTORY)/ubootimage to its final location."
+	@echo "Just copy $(BUILD_DIRECTORY)/image to its final location."
 
-archive: README GNUmakefile $(SOURCES) util.h
+archive: README.h GNUmakefile $(SOURCES) util.h
 	rm -f rbupdate.tar rbupdate.tar.gz
 	tar cf rbupdate.tar $^
 	gzip rbupdate.tar
 
-$(BUILD_DIRECTORY)/ubootimages: \
-	$(BUILD_DIRECTORY)/util.o $(BUILD_DIRECTORY)/ubootimages.o
+$(BUILD_DIRECTORY)/image: \
+	$(BUILD_DIRECTORY)/util.o $(BUILD_DIRECTORY)/image.o
 	$(LD) $(LDFLAGS) -o $@ $^
 	cp $@ $@.debug
 	$(STRIP) $@
